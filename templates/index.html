@@ -1,69 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Email Spam Message Classification Using Python & Machine Learning</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <title>Email Spam Classifier</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .tabs { overflow: hidden; border-bottom: 1px solid #ccc; }
+        .tab-button { float: left; padding: 10px 20px; cursor: pointer; }
+        .tab-button.active { background-color: #ddd; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        .email-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; cursor: pointer; }
+        .email-content { display: none; margin-top: 10px; }
+        .notification { background-color: red; color: white; border-radius: 50%; padding: 5px 10px; margin-left: 5px; }
+    </style>
 </head>
-
-<style>
-    body {
-        background-color: #f8f9fa;
-    }
-    .container {
-        margin-top: 50px;
-    }
-    h1 {
-        color: #007bff;
-    }
-    .form-control {
-        background-color: #ffffff;
-    }
-    .btn-primary {
-        background-color: #007bff;
-        border-color: #007bff;
-    }
-    .btn-primary:hover {
-        background-color: #0069d9;
-        border-color: #0062cc;
-    }
-</style>
-
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Email Spam Message Classifier</h1>
-
-        {% if latest_email %}
-            <div class="form-group">
-                <label>Latest Email Received:</label>
-                <textarea class="form-control" rows="3" readonly>{{ latest_email }}</textarea>
-            </div>
-
-            <form method="POST" action="{{ url_for('analyze_mail') }}">
-                <div class="form-group">
-                    <label for="model">Choose classification model:</label>
-                    <select class="form-control" id="model" name="model">
-                        {% for model in models %}
-                            <option value="{{ model }}">{{ model.replace('_', ' ').title() }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Analyze</button>
-            </form>
-
-            {% if classify is not none %}
-                <div class="mt-4">
-                    {% if classify == 0 %}
-                        <div class="alert alert-danger" role="alert">This is a spam mail</div>
-                    {% elif classify == 1 %}
-                        <div class="alert alert-success" role="alert">This is a ham mail</div>
-                    {% endif %}
-                </div>
-            {% endif %}
-        {% else %}
-            <p>No new emails yet. Send an email to your Gmail account to see it here.</p>
-        {% endif %}
+    <h1>Email Spam Classifier</h1>
+    <div class="tabs">
+        <div class="tab-button" onclick="openTab('inbox')">Thư mới <span id="inbox-count" class="notification">{{ inbox|length }}</span></div>
+        <div class="tab-button" onclick="openTab('spam')">Thư rác <span id="spam-count" class="notification">{{ spam|length }}</span></div>
     </div>
 
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <div id="inbox" class="tab-content active">
+        <h2>Thư mới</h2>
+        {% for email in inbox %}
+            <div class="email-item" onclick="toggleEmail(this)">
+                <strong>{{ email.subject }}</strong> - {{ email.sender }}<br>
+                {{ email.snippet }}
+                <div class="email-content">{{ email.content }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="spam" class="tab-content">
+        <h2>Thư rác</h2>
+        {% for email in spam %}
+            <div class="email-item" onclick="toggleEmail(this)">
+                <strong>{{ email.subject }}</strong> - {{ email.sender }}<br>
+                {{ email.snippet }}
+                <div class="email-content">{{ email.content }}</div>
+                <div>Được nhận diện là thư rác bởi: {{ email.spam_models|join(', ') }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function openTab(tabName) {
+            var tabs = document.getElementsByClassName('tab-content');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            var buttons = document.getElementsByClassName('tab-button');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+            }
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab-button[onclick="openTab('${tabName}')"]`).classList.add('active');
+        }
+
+        function toggleEmail(element) {
+            var content = element.querySelector('.email-content');
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+            } else {
+                content.style.display = 'block';
+            }
+        }
+
+        function updateEmails() {
+            fetch('/update_emails')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Updated emails:', data); // Thêm log để kiểm tra dữ liệu
+                    // Cập nhật inbox
+                    var inboxDiv = document.getElementById('inbox');
+                    inboxDiv.innerHTML = '<h2>Thư mới</h2>';
+                    data.inbox.forEach(email => {
+                        inboxDiv.innerHTML += `
+                            <div class="email-item" onclick="toggleEmail(this)">
+                                <strong>${email.subject}</strong> - ${email.sender}<br>
+                                ${email.snippet}
+                                <div class="email-content">${email.content}</div>
+                            </div>`;
+                    });
+                    document.getElementById('inbox-count').innerText = data.inbox.length;
+
+                    // Cập nhật spam
+                    var spamDiv = document.getElementById('spam');
+                    spamDiv.innerHTML = '<h2>Thư rác</h2>';
+                    data.spam.forEach(email => {
+                        spamDiv.innerHTML += `
+                            <div class="email-item" onclick="toggleEmail(this)">
+                                <strong>${email.subject}</strong> - ${email.sender}<br>
+                                ${email.snippet}
+                                <div class="email-content">${email.content}</div>
+                                <div>Được nhận diện là thư rác bởi: ${email.spam_models.join(', ')}</div>
+                            </div>`;
+                    });
+                    document.getElementById('spam-count').innerText = data.spam.length;
+                })
+                .catch(error => console.error('Error updating emails:', error));
+        }
+
+        // Cập nhật mỗi 5 giây (thay vì 10 giây để kiểm tra nhanh hơn)
+        setInterval(updateEmails, 5000);
+        window.onload = function() {
+            updateEmails();
+        };
+    </script>
 </body>
 </html>
