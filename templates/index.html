@@ -72,7 +72,7 @@
             fetch('/update_emails')
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Updated emails:', data); // Thêm log để kiểm tra dữ liệu
+                    console.log('Updated emails:', data);
                     // Cập nhật inbox
                     var inboxDiv = document.getElementById('inbox');
                     inboxDiv.innerHTML = '<h2>Thư mới</h2>';
@@ -103,7 +103,7 @@
                 .catch(error => console.error('Error updating emails:', error));
         }
 
-        // Cập nhật mỗi 5 giây (thay vì 10 giây để kiểm tra nhanh hơn)
+        // check 5s
         setInterval(updateEmails, 5000);
         window.onload = function() {
             updateEmails();

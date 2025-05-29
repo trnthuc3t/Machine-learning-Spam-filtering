@@ -102,7 +102,7 @@ def get_email_content(service, msg_id):
 
 def get_emails(service):
     try:
-        results = service.users().messages().list(userId='me', labelIds=['INBOX'], maxResults=10).execute()
+        results = service.users().messages().list(userId='me', labelIds=['INBOX'], maxResults=30).execute()
         messages = results.get('messages', [])
         inbox = []
         spam = []
